@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head></head>
+
+<body>
+    <h2>Chat Test 2</h2>
+    <input id="msgInput" placeholder="Type message" />
+    <button onclick="sendMsg()">Send</button>
+    <div id="chatBox"></div>
+
+    <script>
+        const socket = new WebSocket("ws://localhost:5000");
+
+        socket.onopen = () => {
+            socket.send(JSON.stringify({type: "addUser", username: "aman"}));
+        };
+
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === "receiveMessage") {
+                document.getElementById("chatBox").innerHTML += `<p>${data.payload.sender}: ${data.payload.text}</p>`;
+            }
+            if (data.type === "messageSent") {
+                document.getElementById("chatBox").innerHTML += `<p>You: ${data.payload.text}</p>`;
+            }
+        };
+
+        function sendMsg() {
+            const text = document.getElementById("msgInput").value;
+            socket.send(JSON.stringify({
+                type: "sendMessage",
+                sender: "aman",
+                receiver: "rahul",
+                text: text,
+            }));
+            document.getElementById("msgInput").value = "";
+        }
+    </script>
+</body>
+
+</html>
