@@ -8,18 +8,47 @@ const messageSchema = new mongoose.Schema(
     },
     receiver: {
       type: String,
-      required: true,
+      default: "All",
     },
     text: {
       type: String,
-      required: true,
+      default: "",
     },
-    seen: {
-      type: Boolean,
-      default: false,
+    status: {
+      type: String,
+      enum: ["sent", "delivered", "read"],
+      default: "sent",
+    },
+    fileUrl: {
+      type: String,
+      default: null,
+    },
+    fileType: {
+      type: String,
+      default: null,
+    },
+    fileName: {
+      type: String,
+      default: null,
+    },
+    fileSize: {
+      type: String,
+      default: null,
+    },
+    reactions: [
+      {
+        emoji: String,
+        user: String,
+      },
+    ],
+    replyTo: {
+      id: String,
+      text: String,
+      sender: String,
     },
   },
   { timestamps: true },
 );
 
 export default mongoose.model("Message", messageSchema);
+

@@ -1,9 +1,9 @@
 const MessageList = ({ messages, currentUser }) => {
   return (
     <div className="message-list">
-      {messages.map((msg) => (
+      {messages.map((msg, index) => (
         <div
-          key={msg._id || Math.random()}
+          key={msg._id || msg.id || `msg-${index}`}
           className={msg.sender === currentUser ? "sent" : "received"}
         >
           <p>{msg.text}</p>
