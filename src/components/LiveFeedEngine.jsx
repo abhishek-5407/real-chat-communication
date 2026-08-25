@@ -61,6 +61,11 @@ const LiveFeedEngine = ({
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
+  // WhatsApp Multi-Select & Delete Mode state
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedMessageIds, setSelectedMessageIds] = useState([]);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+
   // Voice Note Recording state & refs
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -965,6 +970,86 @@ const LiveFeedEngine = ({
     setActiveDropdownId(null);
   };
 
+  // Pin Message Toggle Handler
+  const handleTogglePinMessage = (messageId) => {
+    setMessageLog((prev) =>
+      prev.map((m) =>
+        m.id === messageId || m._id === messageId
+          ? { ...m, isPinned: !m.isPinned }
+          : m
+      )
+    );
+    setActiveDropdownId(null);
+  };
+
+  // Keep / Star Message Toggle Handler
+  const handleToggleKeepMessage = (messageId) => {
+    setMessageLog((prev) =>
+      prev.map((m) =>
+        m.id === messageId || m._id === messageId
+          ? { ...m, isKept: !m.isKept }
+          : m
+      )
+    );
+    setActiveDropdownId(null);
+  };
+
+  // Selection Mode & Delete Handlers
+  const handleInitiateDeleteSelection = (messageId) => {
+    setIsSelectionMode(true);
+    setSelectedMessageIds([messageId]);
+    setActiveDropdownId(null);
+  };
+
+  const handleToggleSelectMessage = (messageId) => {
+    setSelectedMessageIds((prev) =>
+      prev.includes(messageId)
+        ? prev.filter((id) => id !== messageId)
+        : [...prev, messageId]
+    );
+  };
+
+  const handleSelectAllMessages = () => {
+    if (selectedMessageIds.length === filteredMessages.length) {
+      setSelectedMessageIds([]);
+    } else {
+      setSelectedMessageIds(filteredMessages.map((m) => m.id));
+    }
+  };
+
+  const handleCancelSelectionMode = () => {
+    setIsSelectionMode(false);
+    setSelectedMessageIds([]);
+    setShowDeleteConfirmModal(false);
+  };
+
+  const handleConfirmDeleteSelectedMessages = (deleteMode = "everyone") => {
+    setMessageLog((prev) =>
+      prev.filter(
+        (m) =>
+          !selectedMessageIds.includes(m.id) &&
+          !selectedMessageIds.includes(m._id)
+      )
+    );
+
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      selectedMessageIds.forEach((msgId) => {
+        socketRef.current.send(
+          JSON.stringify({
+            type: "deleteMessage",
+            messageId: msgId,
+            deleteMode,
+            user: currentUser,
+          })
+        );
+      });
+    }
+
+    setIsSelectionMode(false);
+    setSelectedMessageIds([]);
+    setShowDeleteConfirmModal(false);
+  };
+
   const isSendDisabled = !selectedReceiver || connectionStatus !== "CONNECTED";
 
   // Strict 1-on-1 Message Filtering for active conversation (Case-Insensitive)
@@ -1067,78 +1152,126 @@ const LiveFeedEngine = ({
       <main className="chat-main-area">
         {/* Chat Header */}
         <header className="feed-header">
-          <div className="header-title-section">
-            <h2 className="feed-title">
-              {selectedReceiver
-                ? `💬 ${selectedContact ? selectedContact.fullName : selectedReceiver}`
-                : "Select a Contact"}
-            </h2>
-            <span className="feed-subtitle">
-              {selectedReceiver
-                ? `Private 1-on-1 Session with @${selectedReceiver} • ${
-                    onlineUsers.some(
-                      (u) => u && u.toLowerCase() === selectedReceiver.toLowerCase()
-                    )
-                      ? "🟢 Online"
-                      : "⚫ Offline"
-                  }`
-                : "Choose or save a contact from the sidebar to chat"}
-            </span>
-          </div>
-
-          <div className="header-actions-group">
-            {selectedReceiver && (
-              <>
+          {isSelectionMode ? (
+            <div className="selection-mode-bar">
+              <div className="selection-info">
                 <button
                   type="button"
-                  className="btn-header-call btn-call-video"
-                  onClick={() => startCall("video")}
-                  title="Start Video Call"
-                  disabled={connectionStatus !== "CONNECTED"}
+                  className="btn-cancel-selection"
+                  onClick={handleCancelSelectionMode}
+                  title="Cancel selection"
                 >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="2" y="4" width="14" height="16" rx="2" />
-                    <path d="M22 7l-6 5 6 5V7z" />
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
                   </svg>
                 </button>
+                <span className="selection-count-text">
+                  {selectedMessageIds.length} Selected
+                </span>
+              </div>
 
+              <div className="selection-actions">
                 <button
                   type="button"
-                  className="btn-header-call btn-call-audio"
-                  onClick={() => startCall("audio")}
-                  title="Start Audio Call"
-                  disabled={connectionStatus !== "CONNECTED"}
+                  className="btn-select-all-toggle"
+                  onClick={handleSelectAllMessages}
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                  {selectedMessageIds.length === filteredMessages.length ? "Deselect All" : "Select All"}
+                </button>
+                <button
+                  type="button"
+                  className="btn-delete-selected-trigger"
+                  disabled={selectedMessageIds.length === 0}
+                  onClick={() => setShowDeleteConfirmModal(true)}
+                  title="Delete selected messages"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    <line x1="10" y1="11" x2="10" y2="17" />
+                    <line x1="14" y1="11" x2="14" y2="17" />
                   </svg>
+                  <span>Delete ({selectedMessageIds.length})</span>
                 </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="header-title-section">
+                <h2 className="feed-title">
+                  {selectedReceiver
+                    ? `💬 ${selectedContact ? selectedContact.fullName : selectedReceiver}`
+                    : "Select a Contact"}
+                </h2>
+                <span className="feed-subtitle">
+                  {selectedReceiver
+                    ? `Private 1-on-1 Session with @${selectedReceiver} • ${
+                        onlineUsers.some(
+                          (u) => u && u.toLowerCase() === selectedReceiver.toLowerCase()
+                        )
+                          ? "🟢 Online"
+                          : "⚫ Offline"
+                      }`
+                    : "Choose or save a contact from the sidebar to chat"}
+                </span>
+              </div>
+
+              <div className="header-actions-group">
+                {selectedReceiver && (
+                  <>
+                    <button
+                      type="button"
+                      className="btn-header-call btn-call-video"
+                      onClick={() => startCall("video")}
+                      title="Start Video Call"
+                      disabled={connectionStatus !== "CONNECTED"}
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="2" y="4" width="14" height="16" rx="2" />
+                        <path d="M22 7l-6 5 6 5V7z" />
+                      </svg>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn-header-call btn-call-audio"
+                      onClick={() => startCall("audio")}
+                      title="Start Audio Call"
+                      disabled={connectionStatus !== "CONNECTED"}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                      </svg>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn-clear-chat"
+                      onClick={() => setShowClearConfirm(true)}
+                      title="Delete Chat History"
+                    >
+                      🗑️ Clear Chat
+                    </button>
+                  </>
+                )}
+
+                <span className={`status-badge status-${connectionStatus.toLowerCase()}`}>
+                  <span className="status-dot"></span>
+                  {connectionStatus}
+                </span>
 
                 <button
                   type="button"
-                  className="btn-clear-chat"
-                  onClick={() => setShowClearConfirm(true)}
-                  title="Delete Chat History"
+                  className="btn-reconnect"
+                  onClick={handleManualReconnect}
+                  disabled={connectionStatus === "CONNECTED"}
                 >
-                  🗑️ Clear Chat
+                  ⚡ Reconnect
                 </button>
-              </>
-            )}
-
-            <span className={`status-badge status-${connectionStatus.toLowerCase()}`}>
-              <span className="status-dot"></span>
-              {connectionStatus}
-            </span>
-
-            <button
-              type="button"
-              className="btn-reconnect"
-              onClick={handleManualReconnect}
-              disabled={connectionStatus === "CONNECTED"}
-            >
-              Reconnect
-            </button>
-          </div>
+              </div>
+            </>
+          )}
         </header>
 
         {/* Clear Chat Confirmation Banner */}
@@ -1200,58 +1333,176 @@ const LiveFeedEngine = ({
               {filteredMessages.map((msg) => {
                 const isCurrentUser = msg.sender === currentUser;
                 const isDropdownOpen = activeDropdownId === msg.id;
+                const isSelected =
+                  selectedMessageIds.includes(msg.id) ||
+                  selectedMessageIds.includes(msg._id);
 
                 return (
                   <article
                     key={msg.id}
-                    className={`message-card ${isCurrentUser ? "outgoing" : "incoming"}`}
+                    className={`message-card ${isCurrentUser ? "outgoing" : "incoming"} ${
+                      isSelectionMode ? "selection-mode" : ""
+                    } ${isSelected ? "selected" : ""}`}
+                    onClick={() => {
+                      if (isSelectionMode) {
+                        handleToggleSelectMessage(msg.id);
+                      }
+                    }}
                   >
-                    {/* Top-Right Dropdown Arrow */}
-                    <div className="message-dropdown-container" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        className="dropdown-trigger-btn"
-                        onClick={() =>
-                          setActiveDropdownId(isDropdownOpen ? null : msg.id)
-                        }
-                        aria-label="Message options"
-                      >
-                        ▾
-                      </button>
+                    {/* WhatsApp-style Checkbox in Selection Mode */}
+                    {isSelectionMode && (
+                      <div className="message-selection-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleToggleSelectMessage(msg.id);
+                          }}
+                        />
+                        <span className="checkbox-custom-mark">
+                          {isSelected && (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          )}
+                        </span>
+                      </div>
+                    )}
 
-                      {isDropdownOpen && (
-                        <div className="message-dropdown-menu">
-                          <div className="dropdown-section-title">Quick Reactions</div>
-                          <div className="emoji-reaction-picker">
-                            {["👍", "❤️", "🔥", "😂", "👏"].map((emoji) => (
+                    {/* Top-Right Hover Dropdown Arrow & Context Menu */}
+                    {!isSelectionMode && (
+                      <div className="message-dropdown-container" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          className={`dropdown-trigger-btn ${isDropdownOpen ? "active" : ""}`}
+                          onClick={() =>
+                            setActiveDropdownId(isDropdownOpen ? null : msg.id)
+                          }
+                          aria-label="Message options"
+                          title="Message options"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="6 9 12 15 18 9" />
+                          </svg>
+                        </button>
+
+                        {isDropdownOpen && (
+                          <div className={`message-dropdown-menu ${isCurrentUser ? "align-right" : "align-left"}`}>
+                            {/* Quick Emoji Bar (Matching Image 2 Top Row) */}
+                            <div className="dropdown-reactions-bar">
+                              {["👍", "❤️", "😂", "😮", "😢", "🙏"].map((emoji) => (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  className="emoji-reaction-btn"
+                                  onClick={() => handleAddEmojiReaction(msg.id, emoji)}
+                                  title={`React ${emoji}`}
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
                               <button
-                                key={emoji}
                                 type="button"
-                                className="emoji-picker-btn"
-                                onClick={() => handleAddEmojiReaction(msg.id, emoji)}
+                                className="emoji-reaction-btn emoji-plus-btn"
+                                onClick={() => {
+                                  setActiveDropdownId(null);
+                                }}
+                                title="More reactions"
                               >
-                                {emoji}
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <line x1="12" y1="5" x2="12" y2="19" />
+                                  <line x1="5" y1="12" x2="19" y2="12" />
+                                </svg>
                               </button>
-                            ))}
+                            </div>
+
+                            <div className="dropdown-divider" />
+
+                            {/* Options List (Matching Image 2 Context Menu) */}
+                            <div className="dropdown-menu-list">
+                              <button
+                                type="button"
+                                className="dropdown-menu-item"
+                                onClick={() => {
+                                  setReplyToMessage(msg);
+                                  setActiveDropdownId(null);
+                                }}
+                              >
+                                <svg className="menu-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="9 17 4 12 9 7" />
+                                  <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
+                                </svg>
+                                <span>Reply</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                className="dropdown-menu-item"
+                                onClick={() => {
+                                  setActiveDropdownId(null);
+                                }}
+                              >
+                                <svg className="menu-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="12" cy="12" r="10" />
+                                  <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                                  <line x1="9" y1="9" x2="9.01" y2="9" />
+                                  <line x1="15" y1="9" x2="15.01" y2="9" />
+                                </svg>
+                                <span>React</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                className="dropdown-menu-item"
+                                onClick={() => handleTogglePinMessage(msg.id)}
+                              >
+                                <svg className="menu-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M12 17v5" />
+                                  <path d="M9 2v7l-2 3v2h10v-2l-2-3V2z" />
+                                </svg>
+                                <span>{msg.isPinned ? "Unpin" : "Pin"}</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                className="dropdown-menu-item"
+                                onClick={() => handleToggleKeepMessage(msg.id)}
+                              >
+                                <svg className="menu-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                                </svg>
+                                <span>{msg.isKept ? "Unkeep" : "Keep"}</span>
+                              </button>
+
+                              <div className="dropdown-divider" />
+
+                              <button
+                                type="button"
+                                className="dropdown-menu-item item-delete"
+                                onClick={() => handleInitiateDeleteSelection(msg.id)}
+                              >
+                                <svg className="menu-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="3 6 5 6 21 6" />
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                  <line x1="10" y1="11" x2="10" y2="17" />
+                                  <line x1="14" y1="11" x2="14" y2="17" />
+                                </svg>
+                                <span>Delete</span>
+                              </button>
+                            </div>
                           </div>
-                          <hr className="dropdown-divider" />
-                          <button
-                            type="button"
-                            className="dropdown-menu-item"
-                            onClick={() => {
-                              setReplyToMessage(msg);
-                              setActiveDropdownId(null);
-                            }}
-                          >
-                            ↩ Reply to Message
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    )}
 
                     <div className="message-header">
                       <span className="sender-name">{msg.sender}</span>
-                      <span className="message-time">{msg.timestamp}</span>
+                      <div className="message-header-meta">
+                        {msg.isPinned && <span className="message-badge-icon" title="Pinned">📌</span>}
+                        {msg.isKept && <span className="message-badge-icon" title="Kept">🔖</span>}
+                        <span className="message-time">{msg.timestamp}</span>
+                      </div>
                     </div>
 
                     {/* Quoted Reply Block */}
@@ -1647,6 +1898,51 @@ const LiveFeedEngine = ({
           onDeclineCall={handleDeclineCall}
           onEndCall={handleEndCall}
         />
+      )}
+
+      {/* WhatsApp Delete Confirmation Modal */}
+      {showDeleteConfirmModal && (
+        <div className="modal-overlay" onClick={() => setShowDeleteConfirmModal(false)}>
+          <div className="whatsapp-delete-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="delete-modal-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f15c6d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                <line x1="10" y1="11" x2="10" y2="17" />
+                <line x1="14" y1="11" x2="14" y2="17" />
+              </svg>
+            </div>
+            <h3 className="delete-modal-title">
+              Delete {selectedMessageIds.length} message{selectedMessageIds.length > 1 ? "s" : ""}?
+            </h3>
+            <p className="delete-modal-desc">
+              Are you sure you want to delete the selected message{selectedMessageIds.length > 1 ? "s" : ""}?
+            </p>
+            <div className="delete-modal-actions">
+              <button
+                type="button"
+                className="btn-modal-action btn-delete-everyone"
+                onClick={() => handleConfirmDeleteSelectedMessages("everyone")}
+              >
+                Delete for Everyone
+              </button>
+              <button
+                type="button"
+                className="btn-modal-action btn-delete-me"
+                onClick={() => handleConfirmDeleteSelectedMessages("me")}
+              >
+                Delete for Me
+              </button>
+              <button
+                type="button"
+                className="btn-modal-action btn-delete-cancel"
+                onClick={() => setShowDeleteConfirmModal(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

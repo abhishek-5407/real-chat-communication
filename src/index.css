@@ -799,97 +799,221 @@ body {
 /* Message Hover Action Bar */
 .message-card {
   position: relative;
-  padding-right: 28px !important; /* Space for top-right dropdown arrow */
+  padding-right: 32px !important; /* Space for top-right dropdown chevron */
 }
 
-/* Top-Right Dropdown Arrow Button */
+/* Top-Right Dropdown Arrow Button Container */
 .message-dropdown-container {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 10;
+  top: 6px;
+  right: 6px;
+  z-index: 50;
 }
 
+/* Dropdown Trigger Chevron Button - HIDDEN BY DEFAULT, APPEARS ON MESSAGE HOVER */
+.dropdown-trigger-btn,
 .btn-dropdown-toggle {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(17, 27, 33, 0.7);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #aebac1;
   cursor: pointer;
-  padding: 2px 5px;
-  border-radius: 4px;
-  opacity: 0.7;
-  transition: opacity 0.2s, color 0.2s, background-color 0.2s;
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.85);
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.15s ease,
+              color 0.15s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
+.message-card.outgoing .dropdown-trigger-btn,
+.message-card.outgoing .btn-dropdown-toggle {
+  background: rgba(0, 92, 75, 0.7);
+  color: #e9edef;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* SHOW TRIGGER BUTTON ON HOVER OR WHEN OPEN */
+.message-card:hover .dropdown-trigger-btn,
 .message-card:hover .btn-dropdown-toggle,
-.btn-dropdown-toggle:focus {
+.dropdown-trigger-btn.active,
+.btn-dropdown-toggle.active,
+.dropdown-trigger-btn:focus {
   opacity: 1;
-  color: var(--text-primary);
-  background-color: rgba(255, 255, 255, 0.1);
+  visibility: visible;
+  transform: scale(1);
 }
 
-/* Dropdown Menu Popup */
+.dropdown-trigger-btn:hover,
+.btn-dropdown-toggle:hover {
+  background-color: rgba(17, 27, 33, 0.95);
+  color: #ffffff;
+  transform: scale(1.1);
+}
+
+.message-card.outgoing .dropdown-trigger-btn:hover,
+.message-card.outgoing .btn-dropdown-toggle:hover {
+  background-color: rgba(0, 92, 75, 1);
+  color: #ffffff;
+}
+
+/* Floating WhatsApp-Style Context Menu Card (Image 2 Match) */
 .message-dropdown-menu {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 4px);
   right: 0;
-  margin-top: 4px;
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  z-index: 20;
-  min-width: 160px;
-  animation: fadeIn 0.15s ease-out;
+  width: 210px;
+  background-color: #111b21; /* WhatsApp Dark Charcoal */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.4);
+  padding: 8px 0;
+  z-index: 1000;
+  animation: menuIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top right;
+  overflow: hidden;
 }
 
+.message-dropdown-menu.align-left {
+  right: auto;
+  left: 0;
+  transform-origin: top left;
+}
+
+@keyframes menuIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Top Quick Emoji Reactions Bar (Image 2 Top Row) */
+.dropdown-reactions-bar,
 .dropdown-reactions-row {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--border-color);
+  padding: 4px 10px 8px 10px;
 }
 
+.emoji-reaction-btn,
 .btn-dropdown-emoji {
-  background: none;
+  background: transparent;
   border: none;
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   cursor: pointer;
-  padding: 2px;
-  border-radius: 4px;
-  transition: transform 0.15s;
+  padding: 2px 4px;
+  border-radius: 50%;
+  line-height: 1;
+  transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+.emoji-reaction-btn:hover,
 .btn-dropdown-emoji:hover {
-  transform: scale(1.3);
+  transform: scale(1.35);
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
+.emoji-plus-btn {
+  font-size: 0.85rem;
+  color: #8696a0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.emoji-plus-btn:hover {
+  color: #e9edef;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Divider Line */
+.dropdown-divider {
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.08);
+  margin: 4px 0;
+  border: none;
+}
+
+/* Context Menu List Items */
+.dropdown-menu-list {
+  display: flex;
+  flex-direction: column;
+  padding: 2px 0;
+}
+
+.dropdown-menu-item,
 .btn-dropdown-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: none;
-  border: none;
-  color: var(--text-primary);
-  font-size: 0.825rem;
-  font-weight: 500;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
+  gap: 14px;
   width: 100%;
+  padding: 9px 16px;
+  background: transparent;
+  border: none;
+  color: #e9edef;
+  font-size: 0.9rem;
+  font-weight: 400;
+  cursor: pointer;
   text-align: left;
-  transition: background-color 0.15s;
+  transition: background-color 0.12s ease, color 0.12s ease;
 }
 
+.dropdown-menu-item:hover,
 .btn-dropdown-item:hover {
-  background-color: var(--accent-blue);
-  color: white;
+  background-color: #182229;
+  color: #ffffff;
+}
+
+.menu-item-icon {
+  color: #8696a0;
+  transition: color 0.12s ease;
+  flex-shrink: 0;
+}
+
+.dropdown-menu-item:hover .menu-item-icon {
+  color: #00a884;
+}
+
+/* Delete item styling */
+.dropdown-menu-item.item-delete {
+  color: #f15c6d;
+}
+
+.dropdown-menu-item.item-delete .menu-item-icon {
+  color: #f15c6d;
+}
+
+.dropdown-menu-item.item-delete:hover {
+  background-color: rgba(241, 92, 109, 0.12);
+  color: #ff4b5c;
+}
+
+.message-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.message-badge-icon {
+  font-size: 0.75rem;
+  opacity: 0.85;
 }
 
 /* Reactions Display */
@@ -2513,6 +2637,256 @@ body {
 .btn-toolbar-hangup:hover {
   background-color: #d93025;
   transform: scale(1.05);
+}
+
+/* ==========================================================================
+   WhatsApp Selection & Delete Mode Styles
+   ========================================================================== */
+
+.selection-mode-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 4px 8px;
+  background-color: #111b21;
+  color: #e9edef;
+}
+
+.selection-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.btn-cancel-selection {
+  background: transparent;
+  border: none;
+  color: #8696a0;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.btn-cancel-selection:hover {
+  color: #e9edef;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.selection-count-text {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #e9edef;
+}
+
+.selection-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-select-all-toggle {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #00a884;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-select-all-toggle:hover {
+  background: rgba(0, 168, 132, 0.15);
+  border-color: #00a884;
+}
+
+.btn-delete-selected-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ea4335;
+  border: none;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 6px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.btn-delete-selected-trigger:hover:not(:disabled) {
+  background: #d93025;
+}
+
+.btn-delete-selected-trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Message Card in Selection Mode */
+.message-card.selection-mode {
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  position: relative;
+  padding-left: 40px !important;
+}
+
+.message-card.selection-mode:hover {
+  transform: translateY(-1px);
+}
+
+.message-card.selection-mode.selected {
+  outline: 2px solid #00a884;
+  outline-offset: -1px;
+}
+
+.message-card.outgoing.selection-mode.selected {
+  background-color: #005c4b !important;
+}
+
+.message-card.incoming.selection-mode.selected {
+  background-color: #202c33 !important;
+}
+
+/* Checkbox inside message bubble */
+.message-selection-checkbox {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.message-selection-checkbox input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkbox-custom-mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #8696a0;
+  background: rgba(17, 27, 33, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00a884;
+  transition: all 0.15s ease;
+}
+
+.message-card.selection-mode.selected .checkbox-custom-mark {
+  background: #00a884;
+  border-color: #00a884;
+  color: #ffffff;
+}
+
+/* WhatsApp Delete Modal Popup */
+.whatsapp-delete-modal {
+  background-color: #1f2c34;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  width: 90%;
+  max-width: 360px;
+  padding: 24px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+  animation: modalScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modalScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.delete-modal-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(241, 92, 109, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px auto;
+}
+
+.delete-modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #e9edef;
+  margin: 0 0 8px 0;
+}
+
+.delete-modal-desc {
+  font-size: 0.9rem;
+  color: #8696a0;
+  margin: 0 0 24px 0;
+  line-height: 1.4;
+}
+
+.delete-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-modal-action {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 24px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-delete-everyone {
+  background-color: #ea4335;
+  color: #ffffff;
+}
+
+.btn-delete-everyone:hover {
+  background-color: #d93025;
+}
+
+.btn-delete-me {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #e9edef;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-delete-me:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.btn-delete-cancel {
+  background-color: transparent;
+  color: #8696a0;
+}
+
+.btn-delete-cancel:hover {
+  color: #e9edef;
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 
