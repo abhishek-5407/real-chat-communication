@@ -80,8 +80,7 @@ export const sendOtpEmail = async (email, otp, fullName) => {
     return true;
   } catch (error) {
     console.error("[EMAIL OTP SYSTEM ERROR]", error.message || error);
-    // Still return true so user registration process does not get blocked if SMTP fails
-    return true;
+    throw error;
   }
 };
 
