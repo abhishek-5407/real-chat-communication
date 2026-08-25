@@ -5,6 +5,7 @@ export const sendOtpEmail = async (email, otp, fullName) => {
     console.log(`\n========================================`);
     console.log(`[EMAIL OTP SYSTEM]`);
     console.log(`Recipient: ${email} (${fullName})`);
+    console.log(`OTP Code: ${otp}`);
     console.log(`Sending verification code via SMTP to Gmail...`);
     console.log(`Valid for: 10 minutes`);
     console.log(`========================================\n`);
@@ -16,15 +17,34 @@ export const sendOtpEmail = async (email, otp, fullName) => {
       process.env.SMTP_PASS &&
       process.env.SMTP_USER !== "your_email@gmail.com"
     ) {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT) || 587,
-        secure: process.env.SMTP_SECURE === "true",
-        auth: {
-          user: process.env.SMTP_USER.trim(),
-          pass: process.env.SMTP_PASS.replace(/\s+/g, ""),
-        },
-      });
+      const isGmail = process.env.SMTP_HOST.includes("gmail");
+      
+      const transportConfig = isGmail
+        ? {
+            service: "gmail",
+            auth: {
+              user: process.env.SMTP_USER.trim(),
+              pass: process.env.SMTP_PASS.replace(/\s+/g, ""),
+            },
+            connectionTimeout: 8000,
+            greetingTimeout: 8000,
+            socketTimeout: 8000,
+          }
+        : {
+            host: process.env.SMTP_HOST,
+            port: Number(process.env.SMTP_PORT) || 587,
+            secure: process.env.SMTP_SECURE === "true",
+            auth: {
+              user: process.env.SMTP_USER.trim(),
+              pass: process.env.SMTP_PASS.replace(/\s+/g, ""),
+            },
+            tls: { rejectUnauthorized: false },
+            connectionTimeout: 8000,
+            greetingTimeout: 8000,
+            socketTimeout: 8000,
+          };
+
+      const transporter = nodemailer.createTransport(transportConfig);
 
       const mailOptions = {
         from: `"${process.env.SMTP_FROM_NAME || "Prodesk IT Chat"}" <${process.env.SMTP_USER}>`,
@@ -45,7 +65,13 @@ export const sendOtpEmail = async (email, otp, fullName) => {
         `,
       };
 
-      await transporter.sendMail(mailOptions);
+      // Wrap sendMail with a strict 7-second timeout promise
+      const sendPromise = transporter.sendMail(mailOptions);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("SMTP email sending timed out after 7 seconds.")), 7000)
+      );
+
+      await Promise.race([sendPromise, timeoutPromise]);
       console.log(`[EMAIL OTP SYSTEM] Successfully sent email via SMTP to ${email}`);
     } else {
       console.log(`[EMAIL OTP SYSTEM HINT] To receive real emails on Gmail, update SMTP_USER and SMTP_PASS in backend-api/.env`);
@@ -53,8 +79,9 @@ export const sendOtpEmail = async (email, otp, fullName) => {
 
     return true;
   } catch (error) {
-    console.error("[EMAIL OTP SYSTEM ERROR]", error);
-    // Still return true so user can complete registration with logged OTP in dev environment if SMTP fails
+    console.error("[EMAIL OTP SYSTEM ERROR]", error.message || error);
+    // Still return true so user registration process does not get blocked if SMTP fails
     return true;
   }
 };
+
