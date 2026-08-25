@@ -15,7 +15,6 @@ const Register = ({ switchToLogin }) => {
   const [step, setStep] = useState("FORM"); // "FORM" | "OTP"
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" }); // type: "error" | "success" | "info"
-  const [devOtp, setDevOtp] = useState(null);
 
   const handleChange = (e) => {
     setFormData({
@@ -49,9 +48,6 @@ const Register = ({ switchToLogin }) => {
       }
 
       setMessage({ text: data.message, type: "success" });
-      if (data.otpDev) {
-        setDevOtp(data.otpDev);
-      }
       setStep("OTP");
     } catch (err) {
       setMessage({ text: err.message, type: "error" });
@@ -118,9 +114,6 @@ const Register = ({ switchToLogin }) => {
       }
 
       setMessage({ text: data.message, type: "success" });
-      if (data.otpDev) {
-        setDevOtp(data.otpDev);
-      }
     } catch (err) {
       setMessage({ text: err.message, type: "error" });
     } finally {
@@ -138,13 +131,6 @@ const Register = ({ switchToLogin }) => {
       {message.text && (
         <div className={`auth-alert alert-${message.type}`}>
           {message.text}
-        </div>
-      )}
-
-      {devOtp && step === "OTP" && (
-        <div className="dev-otp-banner">
-          <span className="dev-otp-badge">DEV / TESTING OTP:</span>
-          <strong>{devOtp}</strong>
         </div>
       )}
 

@@ -1651,16 +1651,7 @@ body {
   cursor: pointer;
 }
 
-@media (max-width: 768px) {
-  .chat-layout-wrapper {
-    flex-direction: column;
-    height: auto;
-  }
-  .chat-sidebar {
-    width: 100%;
-    height: 250px;
-  }
-}
+
 
 /* Bottom Message Input Controls */
 .feed-footer {
@@ -2887,6 +2878,231 @@ body {
 .btn-delete-cancel:hover {
   color: #e9edef;
   background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* ==========================================================================
+   Full Responsive Layout System (Mobile, Tablet, Laptop & Desktop)
+   ========================================================================== */
+
+/* Mobile Back Button - Hidden on Desktop */
+.btn-mobile-back {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e9edef;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.btn-mobile-back:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  transform: translateX(-2px);
+}
+
+.header-title-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.title-text-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* 1. Large Screen & Desktop (1200px and up) */
+@media (min-width: 1200px) {
+  .chat-layout-wrapper {
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+}
+
+/* 2. Tablets & Laptops (769px to 1024px) */
+@media (max-width: 1024px) {
+  .chat-sidebar {
+    width: 280px;
+    min-width: 260px;
+  }
+  .feed-subtitle {
+    font-size: 0.725rem;
+  }
+}
+
+/* 3. Mobile Devices & Small Tablets (<= 900px) */
+@media (max-width: 900px) {
+  /* Full screen app layout on mobile */
+  .chat-layout-wrapper {
+    height: calc(100vh - 60px) !important;
+    gap: 0;
+    border-radius: 0;
+  }
+
+  /* When NO contact is selected: Show Contacts Sidebar Full Screen */
+  .chat-layout-wrapper:not(.has-active-receiver) .chat-sidebar {
+    width: 100% !important;
+    flex: 1;
+    border: none;
+    border-radius: 0;
+  }
+
+  .chat-layout-wrapper:not(.has-active-receiver) .chat-main-area {
+    display: none !important;
+  }
+
+  /* When a Contact IS selected: Show Chat Area Full Screen & Hide Sidebar */
+  .chat-layout-wrapper.has-active-receiver .chat-sidebar {
+    display: none !important;
+  }
+
+  .chat-layout-wrapper.has-active-receiver .chat-main-area {
+    width: 100% !important;
+    flex: 1;
+    border: none;
+    border-radius: 0;
+  }
+
+  /* Show Mobile Back Arrow in Header */
+  .btn-mobile-back {
+    display: flex;
+  }
+
+  /* Responsive Feed Header */
+  .feed-header {
+    padding: 10px 14px;
+    gap: 8px;
+  }
+
+  .feed-title {
+    font-size: 1.05rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+  }
+
+  .feed-subtitle {
+    font-size: 0.7rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+  }
+
+  .header-actions-group {
+    gap: 6px;
+  }
+
+  .btn-header-call {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+  }
+
+  .btn-clear-chat {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+
+  /* Message Stream & Cards on Mobile */
+  .feed-container {
+    padding: 14px 10px;
+  }
+
+  .message-card {
+    max-width: 88% !important;
+    padding: 10px 14px;
+  }
+
+  /* Input Footer on Mobile */
+  .feed-footer {
+    padding: 8px 10px;
+  }
+
+  .whatsapp-input-pill {
+    padding: 4px 10px;
+    gap: 6px;
+  }
+
+  .btn-pill-action {
+    width: 30px;
+    height: 30px;
+    font-size: 1.2rem;
+  }
+
+  .btn-pill-send {
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+  }
+}
+
+/* 4. Small Mobile Phones (<= 480px) */
+@media (max-width: 480px) {
+  .app-container {
+    padding: 0;
+  }
+
+  /* Auth Forms (Login / Register) */
+  .auth-card {
+    width: 94% !important;
+    padding: 24px 16px !important;
+    border-radius: 16px !important;
+  }
+
+  .auth-header h2 {
+    font-size: 1.4rem !important;
+  }
+
+  .auth-header p {
+    font-size: 0.825rem !important;
+  }
+
+  .feed-title {
+    max-width: 130px;
+    font-size: 0.95rem;
+  }
+
+  .feed-subtitle {
+    max-width: 130px;
+    font-size: 0.675rem;
+  }
+
+  .btn-clear-chat {
+    font-size: 0.7rem;
+    padding: 4px 8px;
+  }
+
+  .status-badge {
+    display: none; /* Hide status badge on tiny phones to save header space */
+  }
+
+  .message-card {
+    max-width: 92% !important;
+    font-size: 0.9rem;
+  }
+
+  /* Context Menu & Modals */
+  .message-dropdown-menu {
+    width: 195px !important;
+  }
+
+  .whatsapp-delete-modal {
+    padding: 18px 14px !important;
+  }
+
+  .btn-modal-action {
+    padding: 10px 14px;
+    font-size: 0.875rem;
+  }
 }
 
 

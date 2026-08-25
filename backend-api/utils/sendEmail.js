@@ -5,19 +5,24 @@ export const sendOtpEmail = async (email, otp, fullName) => {
     console.log(`\n========================================`);
     console.log(`[EMAIL OTP SYSTEM]`);
     console.log(`Recipient: ${email} (${fullName})`);
-    console.log(`Verification OTP: >>> ${otp} <<<`);
+    console.log(`Sending verification code via SMTP to Gmail...`);
     console.log(`Valid for: 10 minutes`);
     console.log(`========================================\n`);
 
     // If SMTP credentials are configured in .env, send actual email
-    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    if (
+      process.env.SMTP_HOST &&
+      process.env.SMTP_USER &&
+      process.env.SMTP_PASS &&
+      process.env.SMTP_USER !== "your_email@gmail.com"
+    ) {
       const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: Number(process.env.SMTP_PORT) || 587,
         secure: process.env.SMTP_SECURE === "true",
         auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
+          user: process.env.SMTP_USER.trim(),
+          pass: process.env.SMTP_PASS.replace(/\s+/g, ""),
         },
       });
 
@@ -42,6 +47,8 @@ export const sendOtpEmail = async (email, otp, fullName) => {
 
       await transporter.sendMail(mailOptions);
       console.log(`[EMAIL OTP SYSTEM] Successfully sent email via SMTP to ${email}`);
+    } else {
+      console.log(`[EMAIL OTP SYSTEM HINT] To receive real emails on Gmail, update SMTP_USER and SMTP_PASS in backend-api/.env`);
     }
 
     return true;

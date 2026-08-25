@@ -1067,7 +1067,7 @@ const LiveFeedEngine = ({
   const selectedContact = savedContacts.find((c) => c.username === selectedReceiver);
 
   return (
-    <div className="chat-layout-wrapper">
+    <div className={`chat-layout-wrapper ${selectedReceiver ? "has-active-receiver" : ""}`}>
       {/* LEFT SIDEBAR: SAVED CONTACTS */}
       <aside className="chat-sidebar">
         <div className="sidebar-header">
@@ -1199,22 +1199,37 @@ const LiveFeedEngine = ({
           ) : (
             <>
               <div className="header-title-section">
-                <h2 className="feed-title">
-                  {selectedReceiver
-                    ? `💬 ${selectedContact ? selectedContact.fullName : selectedReceiver}`
-                    : "Select a Contact"}
-                </h2>
-                <span className="feed-subtitle">
-                  {selectedReceiver
-                    ? `Private 1-on-1 Session with @${selectedReceiver} • ${
-                        onlineUsers.some(
-                          (u) => u && u.toLowerCase() === selectedReceiver.toLowerCase()
-                        )
-                          ? "🟢 Online"
-                          : "⚫ Offline"
-                      }`
-                    : "Choose or save a contact from the sidebar to chat"}
-                </span>
+                {selectedReceiver && (
+                  <button
+                    type="button"
+                    className="btn-mobile-back"
+                    onClick={() => setSelectedReceiver(null)}
+                    title="Back to contacts list"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="19" y1="12" x2="5" y2="12" />
+                      <polyline points="12 19 5 12 12 5" />
+                    </svg>
+                  </button>
+                )}
+                <div className="title-text-group">
+                  <h2 className="feed-title">
+                    {selectedReceiver
+                      ? `💬 ${selectedContact ? selectedContact.fullName : selectedReceiver}`
+                      : "Select a Contact"}
+                  </h2>
+                  <span className="feed-subtitle">
+                    {selectedReceiver
+                      ? `Private 1-on-1 Session with @${selectedReceiver} • ${
+                          onlineUsers.some(
+                            (u) => u && u.toLowerCase() === selectedReceiver.toLowerCase()
+                          )
+                            ? "🟢 Online"
+                            : "⚫ Offline"
+                        }`
+                      : "Choose or save a contact from the sidebar to chat"}
+                  </span>
+                </div>
               </div>
 
               <div className="header-actions-group">

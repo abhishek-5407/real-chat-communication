@@ -1,6 +1,6 @@
 /**
  * Centralized API & WebSocket Configuration
- * Automatically detects current window hostname (localhost or local IP like 192.168.x.x)
+ * Automatically switches between local dev backend and live Render backend.
  */
 export const getHostName = () => {
   if (typeof window !== "undefined" && window.location && window.location.hostname) {
@@ -9,5 +9,16 @@ export const getHostName = () => {
   return "localhost";
 };
 
-export const API_BASE_URL = `http://${getHostName()}:5000/api`;
-export const WEBSOCKET_ENDPOINT = `ws://${getHostName()}:5000`;
+const hostname = getHostName();
+const isLocal = hostname === "localhost" || hostname === "127.0.0.1" || hostname.startsWith("192.168.");
+
+// Production Render Backend URL
+const RENDER_BACKEND_HTTP = "https://real-chat-communication.onrender.com";
+const RENDER_BACKEND_WS = "wss://real-chat-communication.onrender.com";
+
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+  (isLocal ? `http://${hostname}:5000/api` : `${RENDER_BACKEND_HTTP}/api`);
+
+export const WEBSOCKET_ENDPOINT = import.meta.env.VITE_WEBSOCKET_ENDPOINT || 
+  (isLocal ? `ws://${hostname}:5000` : RENDER_BACKEND_WS);
+

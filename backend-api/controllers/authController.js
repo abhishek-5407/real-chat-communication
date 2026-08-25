@@ -79,7 +79,6 @@ export const sendOtp = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: `OTP sent successfully to ${trimmedEmail}.`,
-      otpDev: otp, // Included for easy dev testing
     });
   } catch (error) {
     console.error("Error in sendOtp:", error);
@@ -262,7 +261,6 @@ export const resendOtp = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: `A new OTP has been sent to ${trimmedEmail}.`,
-      otpDev: otp,
     });
   } catch (error) {
     console.error("Error in resendOtp:", error);
