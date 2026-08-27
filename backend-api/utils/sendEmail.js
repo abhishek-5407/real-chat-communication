@@ -29,7 +29,36 @@ export const sendOtpEmail = async (email, otp, fullName) => {
       </div>
     `;
 
-    // Priority 1: Mailjet HTTP REST API (HTTPS Port 443 - Never blocked on Render)
+    // Priority 1: Elastic Email HTTP REST API (Instant HTTPS delivery - Never blocked on Render cloud)
+    if (process.env.ELASTIC_EMAIL_API_KEY) {
+      try {
+        console.log(`[EMAIL OTP SYSTEM] Attempting to send via Elastic Email REST API...`);
+        const params = new URLSearchParams({
+          apikey: process.env.ELASTIC_EMAIL_API_KEY.trim(),
+          subject: `${otp} is your Registration Verification Code`,
+          from: process.env.SMTP_USER || "abhi5407ass@gmail.com",
+          fromName: process.env.SMTP_FROM_NAME || "Prodesk IT Chat",
+          to: email,
+          bodyHtml: emailHtml,
+          isTransactional: "true",
+        });
+
+        const response = await fetch(`https://api.elasticemail.com/v2/email/send?${params.toString()}`, {
+          method: "POST",
+        });
+
+        const resData = await response.json();
+        if (resData.success) {
+          console.log(`[EMAIL OTP SYSTEM] Successfully sent email via Elastic Email REST API to ${email}`);
+          return { success: true, method: "elasticemail" };
+        }
+        console.error(`[EMAIL OTP SYSTEM ERROR] Elastic Email API error:`, resData);
+      } catch (eeErr) {
+        console.error("[EMAIL OTP ELASTIC EMAIL FETCH ERROR]", eeErr.message || eeErr);
+      }
+    }
+
+    // Priority 2: Mailjet HTTP REST API (HTTPS Port 443 - Never blocked on Render)
     if (process.env.MAILJET_API_KEY && process.env.MAILJET_SECRET_KEY) {
       try {
         console.log(`[EMAIL OTP SYSTEM] Attempting to send via Mailjet HTTP REST API...`);
