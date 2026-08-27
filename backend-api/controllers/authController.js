@@ -27,11 +27,11 @@ export const sendOtp = async (req, res) => {
     if (existingEmailUser && existingEmailUser.isVerified) {
       return res.status(400).json({
         success: false,
-        message: "Email is already registered and verified. Please login.",
+        message: "Email is already registered and verified. Please log in.",
       });
     }
 
-    // Check if username is already registered and verified by another user
+    // Check if username is already taken by a verified user
     const existingUsernameUser = await User.findOne({ username: trimmedUsername });
     if (existingUsernameUser && existingUsernameUser.isVerified && existingUsernameUser.email !== trimmedEmail) {
       return res.status(400).json({
@@ -48,28 +48,22 @@ export const sendOtp = async (req, res) => {
     const otp = generateOtp();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
-    let user = existingEmailUser;
+    // Clean up any stale unverified record for this email or username to avoid MongoDB E11000 duplicate index conflicts
+    await User.deleteMany({
+      $or: [{ email: trimmedEmail }, { username: trimmedUsername }],
+      isVerified: false,
+    });
 
-    if (user) {
-      // Update unverified user details
-      user.fullName = fullName.trim();
-      user.username = trimmedUsername;
-      user.password = hashedPassword;
-      user.otp = otp;
-      user.otpExpires = otpExpires;
-      user.isVerified = false;
-    } else {
-      // Create new user record
-      user = new User({
-        fullName: fullName.trim(),
-        email: trimmedEmail,
-        username: trimmedUsername,
-        password: hashedPassword,
-        otp: otp,
-        otpExpires: otpExpires,
-        isVerified: false,
-      });
-    }
+    // Create new user record
+    const user = new User({
+      fullName: fullName.trim(),
+      email: trimmedEmail,
+      username: trimmedUsername,
+      password: hashedPassword,
+      otp: otp,
+      otpExpires: otpExpires,
+      isVerified: false,
+    });
 
     await user.save();
 
@@ -79,7 +73,7 @@ export const sendOtp = async (req, res) => {
     if (!emailResult?.success) {
       return res.status(500).json({
         success: false,
-        message: `Failed to send verification email: ${emailResult?.error || "SMTP error"}. Please check Render environment variables.`,
+        message: `Failed to send verification email (${emailResult?.error || "SMTP error"}). Please check Render environment variables.`,
       });
     }
 
@@ -89,9 +83,18 @@ export const sendOtp = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in sendOtp:", error);
+
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern || {})[0] || "Username/Email";
+      return res.status(400).json({
+        success: false,
+        message: `This ${field} is already registered. Please use a different ${field} or Sign In.`,
+      });
+    }
+
     return res.status(500).json({
       success: false,
-      message: "Server error while processing registration. Please try again.",
+      message: error.message || "Server error while processing registration. Please try again.",
     });
   }
 };
