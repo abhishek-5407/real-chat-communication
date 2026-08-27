@@ -65,56 +65,75 @@ export const sendOtpEmail = async (email, otp, fullName) => {
       process.env.SMTP_PASS &&
       process.env.SMTP_USER !== "your_email@gmail.com"
     ) {
+      const isGmail = process.env.SMTP_HOST.includes("gmail") || process.env.SMTP_USER.includes("@gmail.com");
+      const userEmail = process.env.SMTP_USER.trim();
+      const passClean = process.env.SMTP_PASS.replace(/\s+/g, "");
+
+      // Attempt 1: SSL Port 465
       try {
-        const isGmail = process.env.SMTP_HOST.includes("gmail") || process.env.SMTP_USER.includes("@gmail.com");
-        
+        console.log(`[EMAIL OTP SYSTEM] Attempting SMTP send to ${email}...`);
         const transportConfig = isGmail
           ? {
               host: "smtp.gmail.com",
               port: 465,
               secure: true,
-              auth: {
-                user: process.env.SMTP_USER.trim(),
-                pass: process.env.SMTP_PASS.replace(/\s+/g, ""),
-              },
-              connectionTimeout: 12000,
-              greetingTimeout: 12000,
-              socketTimeout: 12000,
+              auth: { user: userEmail, pass: passClean },
+              connectionTimeout: 20000,
+              greetingTimeout: 20000,
+              socketTimeout: 20000,
             }
           : {
               host: process.env.SMTP_HOST,
               port: Number(process.env.SMTP_PORT) || 587,
               secure: process.env.SMTP_SECURE === "true",
-              auth: {
-                user: process.env.SMTP_USER.trim(),
-                pass: process.env.SMTP_PASS.replace(/\s+/g, ""),
-              },
+              auth: { user: userEmail, pass: passClean },
               tls: { rejectUnauthorized: false },
-              connectionTimeout: 12000,
-              greetingTimeout: 12000,
-              socketTimeout: 12000,
+              connectionTimeout: 20000,
+              greetingTimeout: 20000,
+              socketTimeout: 20000,
             };
 
         const transporter = nodemailer.createTransport(transportConfig);
 
         const mailOptions = {
-          from: `"${process.env.SMTP_FROM_NAME || "Prodesk IT Chat"}" <${process.env.SMTP_USER.trim()}>`,
+          from: `"${process.env.SMTP_FROM_NAME || "Prodesk IT Chat"}" <${userEmail}>`,
           to: email,
           subject: `${otp} is your Registration Verification Code`,
           html: emailHtml,
         };
 
-        const sendPromise = transporter.sendMail(mailOptions);
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("SMTP email sending timed out after 12 seconds.")), 12000)
-        );
-
-        await Promise.race([sendPromise, timeoutPromise]);
+        await transporter.sendMail(mailOptions);
         console.log(`[EMAIL OTP SYSTEM] Successfully sent email via SMTP to ${email}`);
         return { success: true, method: "smtp" };
-      } catch (smtpError) {
-        console.error("[EMAIL OTP SMTP ERROR]", smtpError.message || smtpError);
-        return { success: false, method: "smtp_error", error: smtpError.message || String(smtpError) };
+      } catch (smtpError1) {
+        console.error("[EMAIL OTP SMTP PORT 465 ERROR]", smtpError1.message || smtpError1);
+
+        // Attempt 2 for Gmail: service "gmail"
+        if (isGmail) {
+          try {
+            console.log(`[EMAIL OTP SYSTEM] Trying Gmail service fallback transport...`);
+            const fallbackTransporter = nodemailer.createTransport({
+              service: "gmail",
+              auth: { user: userEmail, pass: passClean },
+              connectionTimeout: 20000,
+            });
+
+            await fallbackTransporter.sendMail({
+              from: `"${process.env.SMTP_FROM_NAME || "Prodesk IT Chat"}" <${userEmail}>`,
+              to: email,
+              subject: `${otp} is your Registration Verification Code`,
+              html: emailHtml,
+            });
+
+            console.log(`[EMAIL OTP SYSTEM] Successfully sent email via Gmail service fallback to ${email}`);
+            return { success: true, method: "gmail_service" };
+          } catch (smtpError2) {
+            console.error("[EMAIL OTP GMAIL FALLBACK ERROR]", smtpError2.message || smtpError2);
+            return { success: false, method: "smtp_error", error: smtpError2.message || String(smtpError2) };
+          }
+        }
+
+        return { success: false, method: "smtp_error", error: smtpError1.message || String(smtpError1) };
       }
     }
 
