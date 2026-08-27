@@ -79,7 +79,7 @@ export const sendOtp = async (req, res) => {
     if (!emailResult?.success) {
       return res.status(500).json({
         success: false,
-        message: "Failed to send verification email. Please ensure SMTP_USER and SMTP_PASS are configured on Render.",
+        message: `Failed to send verification email: ${emailResult?.error || "SMTP error"}. Please check Render environment variables.`,
       });
     }
 

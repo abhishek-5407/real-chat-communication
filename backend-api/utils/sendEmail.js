@@ -114,11 +114,12 @@ export const sendOtpEmail = async (email, otp, fullName) => {
         return { success: true, method: "smtp" };
       } catch (smtpError) {
         console.error("[EMAIL OTP SMTP ERROR]", smtpError.message || smtpError);
+        return { success: false, method: "smtp_error", error: smtpError.message || String(smtpError) };
       }
     }
 
-    console.log(`[EMAIL OTP DEV FALLBACK] No active email transport succeeded. FOR TESTING, OTP FOR ${email} IS: ${otp}`);
-    return { success: false, method: "dev_fallback", otp };
+    console.log(`[EMAIL OTP DEV FALLBACK] No active email transport succeeded for ${email}`);
+    return { success: false, method: "no_transport", error: "No active email transport configured (Check SMTP_USER / SMTP_PASS on Render)" };
   } catch (error) {
     console.error("[EMAIL OTP SYSTEM CRITICAL ERROR]", error.message || error);
     return { success: false, method: "error", otp };
