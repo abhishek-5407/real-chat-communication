@@ -74,11 +74,20 @@ export const sendOtp = async (req, res) => {
     await user.save();
 
     // Send OTP email
-    await sendOtpEmail(trimmedEmail, otp, fullName.trim());
+    const emailResult = await sendOtpEmail(trimmedEmail, otp, fullName.trim());
+
+    let message = `OTP sent successfully to ${trimmedEmail}.`;
+    if (!emailResult?.success) {
+      if (emailResult?.method === "resend_restricted") {
+        message = `Resend free tier only delivers to registered email (abhi5407ass@gmail.com). [DEV MODE OTP: ${otp}]`;
+      } else {
+        message = `Email transport fallback triggered. [DEV MODE OTP: ${otp}]`;
+      }
+    }
 
     return res.status(200).json({
       success: true,
-      message: `OTP sent successfully to ${trimmedEmail}.`,
+      message,
     });
   } catch (error) {
     console.error("Error in sendOtp:", error);
@@ -256,11 +265,20 @@ export const resendOtp = async (req, res) => {
     user.otpExpires = otpExpires;
     await user.save();
 
-    await sendOtpEmail(trimmedEmail, otp, user.fullName);
+    const emailResult = await sendOtpEmail(trimmedEmail, otp, user.fullName);
+
+    let message = `A new OTP has been sent to ${trimmedEmail}.`;
+    if (!emailResult?.success) {
+      if (emailResult?.method === "resend_restricted") {
+        message = `Resend free tier only delivers to registered email (abhi5407ass@gmail.com). [DEV MODE OTP: ${otp}]`;
+      } else {
+        message = `Email transport fallback triggered. [DEV MODE OTP: ${otp}]`;
+      }
+    }
 
     return res.status(200).json({
       success: true,
-      message: `A new OTP has been sent to ${trimmedEmail}.`,
+      message,
     });
   } catch (error) {
     console.error("Error in resendOtp:", error);
