@@ -1,4 +1,10 @@
 import nodemailer from "nodemailer";
+import dns from "dns";
+
+// Force IPv4 DNS resolution for cloud hosts like Render that lack IPv6 outbound routing
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder("ipv4first");
+}
 
 export const sendOtpEmail = async (email, otp, fullName) => {
   try {
@@ -69,7 +75,7 @@ export const sendOtpEmail = async (email, otp, fullName) => {
       const userEmail = process.env.SMTP_USER.trim();
       const passClean = process.env.SMTP_PASS.replace(/\s+/g, "");
 
-      // Attempt 1: SSL Port 465
+      // Attempt 1: SSL Port 465 with IPv4 family
       try {
         console.log(`[EMAIL OTP SYSTEM] Attempting SMTP send to ${email}...`);
         const transportConfig = isGmail
@@ -77,6 +83,7 @@ export const sendOtpEmail = async (email, otp, fullName) => {
               host: "smtp.gmail.com",
               port: 465,
               secure: true,
+              family: 4,
               auth: { user: userEmail, pass: passClean },
               connectionTimeout: 20000,
               greetingTimeout: 20000,
@@ -86,6 +93,7 @@ export const sendOtpEmail = async (email, otp, fullName) => {
               host: process.env.SMTP_HOST,
               port: Number(process.env.SMTP_PORT) || 587,
               secure: process.env.SMTP_SECURE === "true",
+              family: 4,
               auth: { user: userEmail, pass: passClean },
               tls: { rejectUnauthorized: false },
               connectionTimeout: 20000,
