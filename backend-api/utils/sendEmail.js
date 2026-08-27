@@ -66,18 +66,20 @@ export const sendOtpEmail = async (email, otp, fullName) => {
       process.env.SMTP_USER !== "your_email@gmail.com"
     ) {
       try {
-        const isGmail = process.env.SMTP_HOST.includes("gmail");
+        const isGmail = process.env.SMTP_HOST.includes("gmail") || process.env.SMTP_USER.includes("@gmail.com");
         
         const transportConfig = isGmail
           ? {
-              service: "gmail",
+              host: "smtp.gmail.com",
+              port: 465,
+              secure: true,
               auth: {
                 user: process.env.SMTP_USER.trim(),
                 pass: process.env.SMTP_PASS.replace(/\s+/g, ""),
               },
-              connectionTimeout: 8000,
-              greetingTimeout: 8000,
-              socketTimeout: 8000,
+              connectionTimeout: 12000,
+              greetingTimeout: 12000,
+              socketTimeout: 12000,
             }
           : {
               host: process.env.SMTP_HOST,
@@ -88,15 +90,15 @@ export const sendOtpEmail = async (email, otp, fullName) => {
                 pass: process.env.SMTP_PASS.replace(/\s+/g, ""),
               },
               tls: { rejectUnauthorized: false },
-              connectionTimeout: 8000,
-              greetingTimeout: 8000,
-              socketTimeout: 8000,
+              connectionTimeout: 12000,
+              greetingTimeout: 12000,
+              socketTimeout: 12000,
             };
 
         const transporter = nodemailer.createTransport(transportConfig);
 
         const mailOptions = {
-          from: `"${process.env.SMTP_FROM_NAME || "Prodesk IT Chat"}" <${process.env.SMTP_USER}>`,
+          from: `"${process.env.SMTP_FROM_NAME || "Prodesk IT Chat"}" <${process.env.SMTP_USER.trim()}>`,
           to: email,
           subject: `${otp} is your Registration Verification Code`,
           html: emailHtml,
@@ -104,7 +106,7 @@ export const sendOtpEmail = async (email, otp, fullName) => {
 
         const sendPromise = transporter.sendMail(mailOptions);
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("SMTP email sending timed out after 7 seconds.")), 7000)
+          setTimeout(() => reject(new Error("SMTP email sending timed out after 12 seconds.")), 12000)
         );
 
         await Promise.race([sendPromise, timeoutPromise]);
