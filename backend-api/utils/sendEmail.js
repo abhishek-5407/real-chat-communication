@@ -29,7 +29,29 @@ export const sendOtpEmail = async (email, otp, fullName) => {
       </div>
     `;
 
-    // Priority 1: Elastic Email HTTP REST API (Instant HTTPS delivery - Never blocked on Render cloud)
+    // Priority 1: Vercel Serverless Gmail Relay (HTTPS Port 443 - Bypasses Render Cloud Port 587/465 blocks completely)
+    try {
+      console.log(`[EMAIL OTP SYSTEM] Attempting to send via Vercel Serverless Gmail Relay...`);
+      const vercelEndpoint = process.env.VERCEL_EMAIL_ENDPOINT || "https://real-chat-communication.vercel.app/api/send-otp-email";
+      const vResponse = await fetch(vercelEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp, fullName }),
+      });
+
+      if (vResponse.ok) {
+        const vData = await vResponse.json();
+        if (vData.success) {
+          console.log(`[EMAIL OTP SYSTEM] Successfully sent real Gmail email via Vercel Serverless Relay to ${email}`);
+          return { success: true, method: "vercel_gmail_relay" };
+        }
+      }
+      console.warn(`[EMAIL OTP SYSTEM] Vercel relay response not ok (status ${vResponse.status}), falling back...`);
+    } catch (vErr) {
+      console.warn("[EMAIL OTP VERCEL RELAY WARN]", vErr.message || vErr);
+    }
+
+    // Priority 2: Elastic Email HTTP REST API (Instant HTTPS delivery - Never blocked on Render cloud)
     if (process.env.ELASTIC_EMAIL_API_KEY) {
       try {
         console.log(`[EMAIL OTP SYSTEM] Attempting to send via Elastic Email REST API...`);
