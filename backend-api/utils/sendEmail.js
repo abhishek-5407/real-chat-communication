@@ -93,7 +93,7 @@ export const sendOtpEmail = async (email, otp, fullName) => {
       }
     }
 
-    // Priority 2: Nodemailer SMTP
+    // Priority 3: Nodemailer SMTP with direct IPv4 Resolution (Fixes Render IPv6 ENETUNREACH block)
     if (
       process.env.SMTP_HOST &&
       process.env.SMTP_USER &&
@@ -103,34 +103,40 @@ export const sendOtpEmail = async (email, otp, fullName) => {
       const isGmail = process.env.SMTP_HOST.includes("gmail") || process.env.SMTP_USER.includes("@gmail.com");
       const userEmail = process.env.SMTP_USER.trim();
       const passClean = process.env.SMTP_PASS.replace(/\s+/g, "");
+      const hostClean = process.env.SMTP_HOST.trim();
 
-      // Attempt 1: SSL Port 465 with IPv4 lookup
       try {
         console.log(`[EMAIL OTP SYSTEM] Attempting SMTP send to ${email}...`);
-        const ipv4Lookup = (hostname, options, callback) => dns.lookup(hostname, { family: 4 }, callback);
 
-        const transportConfig = isGmail
-          ? {
-              host: "smtp.gmail.com",
-              port: 465,
-              secure: true,
-              auth: { user: userEmail, pass: passClean },
-              lookup: ipv4Lookup,
-              connectionTimeout: 20000,
-              greetingTimeout: 20000,
-              socketTimeout: 20000,
+        let targetHost = hostClean;
+        let serverName = hostClean;
+
+        if (isGmail) {
+          try {
+            const addresses = await dns.promises.resolve4("smtp.gmail.com");
+            if (addresses && addresses.length > 0) {
+              targetHost = addresses[0];
+              serverName = "smtp.gmail.com";
+              console.log(`[EMAIL OTP SYSTEM] Resolved Gmail SMTP to direct IPv4 address: ${targetHost}`);
             }
-          : {
-              host: process.env.SMTP_HOST,
-              port: Number(process.env.SMTP_PORT) || 587,
-              secure: process.env.SMTP_SECURE === "true",
-              auth: { user: userEmail, pass: passClean },
-              lookup: ipv4Lookup,
-              tls: { rejectUnauthorized: false },
-              connectionTimeout: 20000,
-              greetingTimeout: 20000,
-              socketTimeout: 20000,
-            };
+          } catch (dnsErr) {
+            console.warn("[EMAIL OTP DNS WARN] Direct IPv4 lookup failed, falling back to hostname:", dnsErr.message);
+          }
+        }
+
+        const transportConfig = {
+          host: targetHost,
+          port: 465,
+          secure: true,
+          auth: { user: userEmail, pass: passClean },
+          tls: {
+            servername: serverName,
+            rejectUnauthorized: false,
+          },
+          connectionTimeout: 20000,
+          greetingTimeout: 20000,
+          socketTimeout: 20000,
+        };
 
         const transporter = nodemailer.createTransport(transportConfig);
 
@@ -142,39 +148,11 @@ export const sendOtpEmail = async (email, otp, fullName) => {
         };
 
         await transporter.sendMail(mailOptions);
-        console.log(`[EMAIL OTP SYSTEM] Successfully sent email via SMTP to ${email}`);
-        return { success: true, method: "smtp" };
-      } catch (smtpError1) {
-        console.error("[EMAIL OTP SMTP PORT 465 ERROR]", smtpError1.message || smtpError1);
-
-        // Attempt 2 for Gmail: service "gmail" with IPv4 lookup
-        if (isGmail) {
-          try {
-            console.log(`[EMAIL OTP SYSTEM] Trying Gmail service fallback transport...`);
-            const ipv4Lookup = (hostname, options, callback) => dns.lookup(hostname, { family: 4 }, callback);
-            const fallbackTransporter = nodemailer.createTransport({
-              service: "gmail",
-              auth: { user: userEmail, pass: passClean },
-              lookup: ipv4Lookup,
-              connectionTimeout: 20000,
-            });
-
-            await fallbackTransporter.sendMail({
-              from: `"${process.env.SMTP_FROM_NAME || "Prodesk IT Chat"}" <${userEmail}>`,
-              to: email,
-              subject: `${otp} is your Registration Verification Code`,
-              html: emailHtml,
-            });
-
-            console.log(`[EMAIL OTP SYSTEM] Successfully sent email via Gmail service fallback to ${email}`);
-            return { success: true, method: "gmail_service" };
-          } catch (smtpError2) {
-            console.error("[EMAIL OTP GMAIL FALLBACK ERROR]", smtpError2.message || smtpError2);
-            return { success: false, method: "smtp_error", error: smtpError2.message || String(smtpError2) };
-          }
-        }
-
-        return { success: false, method: "smtp_error", error: smtpError1.message || String(smtpError1) };
+        console.log(`[EMAIL OTP SYSTEM] Successfully sent email via Direct IPv4 SMTP to ${email}`);
+        return { success: true, method: "smtp_direct_ipv4" };
+      } catch (smtpError) {
+        console.error("[EMAIL OTP DIRECT IPV4 SMTP ERROR]", smtpError.message || smtpError);
+        return { success: false, method: "smtp_error", error: smtpError.message || String(smtpError) };
       }
     }
 
