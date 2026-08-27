@@ -130,7 +130,7 @@ export const sendOtpEmail = async (email, otp, fullName) => {
       }
     }
 
-    // Priority 3: Nodemailer SMTP with direct IPv4 Resolution (Fixes Render IPv6 ENETUNREACH block)
+    // Priority 3: Nodemailer Gmail / SMTP Transport (Port 587 STARTTLS)
     if (
       process.env.SMTP_HOST &&
       process.env.SMTP_USER &&
@@ -140,42 +140,18 @@ export const sendOtpEmail = async (email, otp, fullName) => {
       const isGmail = process.env.SMTP_HOST.includes("gmail") || process.env.SMTP_USER.includes("@gmail.com");
       const userEmail = process.env.SMTP_USER.trim();
       const passClean = process.env.SMTP_PASS.replace(/\s+/g, "");
-      const hostClean = process.env.SMTP_HOST.trim();
 
+      // Attempt 1: Port 587 STARTTLS
       try {
-        console.log(`[EMAIL OTP SYSTEM] Attempting SMTP send to ${email}...`);
-
-        let targetHost = hostClean;
-        let serverName = hostClean;
-
-        if (isGmail) {
-          try {
-            const addresses = await dns.promises.resolve4("smtp.gmail.com");
-            if (addresses && addresses.length > 0) {
-              targetHost = addresses[0];
-              serverName = "smtp.gmail.com";
-              console.log(`[EMAIL OTP SYSTEM] Resolved Gmail SMTP to direct IPv4 address: ${targetHost}`);
-            }
-          } catch (dnsErr) {
-            console.warn("[EMAIL OTP DNS WARN] Direct IPv4 lookup failed, falling back to hostname:", dnsErr.message);
-          }
-        }
-
-        const transportConfig = {
-          host: targetHost,
-          port: 465,
-          secure: true,
+        console.log(`[EMAIL OTP SYSTEM] Attempting SMTP send to ${email} via port 587...`);
+        const transporter = nodemailer.createTransport({
+          host: "smtp.gmail.com",
+          port: 587,
+          secure: false,
           auth: { user: userEmail, pass: passClean },
-          tls: {
-            servername: serverName,
-            rejectUnauthorized: false,
-          },
-          connectionTimeout: 20000,
-          greetingTimeout: 20000,
-          socketTimeout: 20000,
-        };
-
-        const transporter = nodemailer.createTransport(transportConfig);
+          tls: { rejectUnauthorized: false },
+          connectionTimeout: 15000,
+        });
 
         const mailOptions = {
           from: `"${process.env.SMTP_FROM_NAME || "Prodesk IT Chat"}" <${userEmail}>`,
@@ -185,11 +161,36 @@ export const sendOtpEmail = async (email, otp, fullName) => {
         };
 
         await transporter.sendMail(mailOptions);
-        console.log(`[EMAIL OTP SYSTEM] Successfully sent email via Direct IPv4 SMTP to ${email}`);
-        return { success: true, method: "smtp_direct_ipv4" };
-      } catch (smtpError) {
-        console.error("[EMAIL OTP DIRECT IPV4 SMTP ERROR]", smtpError.message || smtpError);
-        return { success: false, method: "smtp_error", error: smtpError.message || String(smtpError) };
+        console.log(`[EMAIL OTP SYSTEM] Successfully sent email via SMTP Port 587 to ${email}`);
+        return { success: true, method: "smtp_587" };
+      } catch (smtpError1) {
+        console.error("[EMAIL OTP SMTP PORT 587 ERROR]", smtpError1.message || smtpError1);
+
+        // Attempt 2: Service "gmail" transport fallback
+        if (isGmail) {
+          try {
+            console.log(`[EMAIL OTP SYSTEM] Trying Gmail service fallback transport...`);
+            const fallbackTransporter = nodemailer.createTransport({
+              service: "gmail",
+              auth: { user: userEmail, pass: passClean },
+            });
+
+            await fallbackTransporter.sendMail({
+              from: `"${process.env.SMTP_FROM_NAME || "Prodesk IT Chat"}" <${userEmail}>`,
+              to: email,
+              subject: `${otp} is your Registration Verification Code`,
+              html: emailHtml,
+            });
+
+            console.log(`[EMAIL OTP SYSTEM] Successfully sent email via Gmail service transport to ${email}`);
+            return { success: true, method: "gmail_service" };
+          } catch (smtpError2) {
+            console.error("[EMAIL OTP GMAIL FALLBACK ERROR]", smtpError2.message || smtpError2);
+            return { success: false, method: "smtp_error", error: smtpError2.message || String(smtpError2) };
+          }
+        }
+
+        return { success: false, method: "smtp_error", error: smtpError1.message || String(smtpError1) };
       }
     }
 
