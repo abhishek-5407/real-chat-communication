@@ -76,18 +76,16 @@ export const sendOtp = async (req, res) => {
     // Send OTP email
     const emailResult = await sendOtpEmail(trimmedEmail, otp, fullName.trim());
 
-    let message = `OTP sent successfully to ${trimmedEmail}.`;
     if (!emailResult?.success) {
-      if (emailResult?.method === "resend_restricted") {
-        message = `Resend free tier only delivers to registered email (abhi5407ass@gmail.com). [DEV MODE OTP: ${otp}]`;
-      } else {
-        message = `Email transport fallback triggered. [DEV MODE OTP: ${otp}]`;
-      }
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send verification email. Please ensure SMTP_USER and SMTP_PASS are configured on Render.",
+      });
     }
 
     return res.status(200).json({
       success: true,
-      message,
+      message: `Verification code sent to ${trimmedEmail}. Please check your Email Inbox / Spam folder.`,
     });
   } catch (error) {
     console.error("Error in sendOtp:", error);
@@ -267,18 +265,16 @@ export const resendOtp = async (req, res) => {
 
     const emailResult = await sendOtpEmail(trimmedEmail, otp, user.fullName);
 
-    let message = `A new OTP has been sent to ${trimmedEmail}.`;
     if (!emailResult?.success) {
-      if (emailResult?.method === "resend_restricted") {
-        message = `Resend free tier only delivers to registered email (abhi5407ass@gmail.com). [DEV MODE OTP: ${otp}]`;
-      } else {
-        message = `Email transport fallback triggered. [DEV MODE OTP: ${otp}]`;
-      }
+      return res.status(500).json({
+        success: false,
+        message: "Failed to resend verification email. Please ensure SMTP_USER and SMTP_PASS are configured on Render.",
+      });
     }
 
     return res.status(200).json({
       success: true,
-      message,
+      message: `A new verification code has been sent to ${trimmedEmail}. Please check your Email Inbox / Spam folder.`,
     });
   } catch (error) {
     console.error("Error in resendOtp:", error);
