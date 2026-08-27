@@ -75,16 +75,18 @@ export const sendOtpEmail = async (email, otp, fullName) => {
       const userEmail = process.env.SMTP_USER.trim();
       const passClean = process.env.SMTP_PASS.replace(/\s+/g, "");
 
-      // Attempt 1: SSL Port 465 with IPv4 family
+      // Attempt 1: SSL Port 465 with IPv4 lookup
       try {
         console.log(`[EMAIL OTP SYSTEM] Attempting SMTP send to ${email}...`);
+        const ipv4Lookup = (hostname, options, callback) => dns.lookup(hostname, { family: 4 }, callback);
+
         const transportConfig = isGmail
           ? {
               host: "smtp.gmail.com",
               port: 465,
               secure: true,
-              family: 4,
               auth: { user: userEmail, pass: passClean },
+              lookup: ipv4Lookup,
               connectionTimeout: 20000,
               greetingTimeout: 20000,
               socketTimeout: 20000,
@@ -93,8 +95,8 @@ export const sendOtpEmail = async (email, otp, fullName) => {
               host: process.env.SMTP_HOST,
               port: Number(process.env.SMTP_PORT) || 587,
               secure: process.env.SMTP_SECURE === "true",
-              family: 4,
               auth: { user: userEmail, pass: passClean },
+              lookup: ipv4Lookup,
               tls: { rejectUnauthorized: false },
               connectionTimeout: 20000,
               greetingTimeout: 20000,
@@ -116,13 +118,15 @@ export const sendOtpEmail = async (email, otp, fullName) => {
       } catch (smtpError1) {
         console.error("[EMAIL OTP SMTP PORT 465 ERROR]", smtpError1.message || smtpError1);
 
-        // Attempt 2 for Gmail: service "gmail"
+        // Attempt 2 for Gmail: service "gmail" with IPv4 lookup
         if (isGmail) {
           try {
             console.log(`[EMAIL OTP SYSTEM] Trying Gmail service fallback transport...`);
+            const ipv4Lookup = (hostname, options, callback) => dns.lookup(hostname, { family: 4 }, callback);
             const fallbackTransporter = nodemailer.createTransport({
               service: "gmail",
               auth: { user: userEmail, pass: passClean },
+              lookup: ipv4Lookup,
               connectionTimeout: 20000,
             });
 
