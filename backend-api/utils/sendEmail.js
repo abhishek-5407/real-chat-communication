@@ -29,7 +29,44 @@ export const sendOtpEmail = async (email, otp, fullName) => {
       </div>
     `;
 
-    // Priority 1: Brevo.com HTTP REST API (Instant Delivery via HTTPS Port 443 - Never blocked on Render cloud)
+    // Priority 1: Mailjet HTTP REST API (HTTPS Port 443 - Never blocked on Render)
+    if (process.env.MAILJET_API_KEY && process.env.MAILJET_SECRET_KEY) {
+      try {
+        console.log(`[EMAIL OTP SYSTEM] Attempting to send via Mailjet HTTP REST API...`);
+        const authHeader = "Basic " + Buffer.from(`${process.env.MAILJET_API_KEY.trim()}:${process.env.MAILJET_SECRET_KEY.trim()}`).toString("base64");
+        const response = await fetch("https://api.mailjet.com/v3.1/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: authHeader,
+          },
+          body: JSON.stringify({
+            Messages: [
+              {
+                From: {
+                  Email: process.env.SMTP_USER || "abhi5407ass@gmail.com",
+                  Name: process.env.SMTP_FROM_NAME || "Prodesk IT Chat",
+                },
+                To: [{ Email: email, Name: fullName }],
+                Subject: `${otp} is your Registration Verification Code`,
+                HTMLPart: emailHtml,
+              },
+            ],
+          }),
+        });
+
+        const resData = await response.json();
+        if (response.ok) {
+          console.log(`[EMAIL OTP SYSTEM] Successfully sent email via Mailjet REST API to ${email}`);
+          return { success: true, method: "mailjet" };
+        }
+        console.error(`[EMAIL OTP SYSTEM ERROR] Mailjet API error:`, resData);
+      } catch (mjErr) {
+        console.error("[EMAIL OTP MAILJET FETCH ERROR]", mjErr.message || mjErr);
+      }
+    }
+
+    // Priority 2: Brevo.com HTTP REST API (Instant Delivery via HTTPS Port 443 - Never blocked on Render cloud)
     if (process.env.BREVO_API_KEY && process.env.BREVO_API_KEY.length > 10) {
       try {
         console.log(`[EMAIL OTP SYSTEM] Attempting to send via Brevo HTTP REST API...`);
