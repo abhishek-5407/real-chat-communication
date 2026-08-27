@@ -51,13 +51,7 @@ export const sendOtpEmail = async (email, otp, fullName) => {
         console.error(`[EMAIL OTP SYSTEM ERROR] Resend API error:`, resData.message || resData);
         if (resData.message && resData.message.includes("testing emails to your own email address")) {
           console.warn(`\n⚠️ Resend Free Tier Restriction: Emails can only be delivered to registered email (abhi5407ass@gmail.com).`);
-          console.warn(`🔑 DEV FALLBACK OTP for ${email}: ${otp}\n`);
-          return {
-            success: false,
-            method: "resend_restricted",
-            message: resData.message,
-            otp,
-          };
+          console.warn(`Attempting SMTP fallback if configured...\n`);
         }
       } catch (resErr) {
         console.error("[EMAIL OTP RESEND FETCH ERROR]", resErr.message || resErr);
